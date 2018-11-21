@@ -27,6 +27,7 @@ local function sync()
     for index, banned_ip in ipairs(new_ip_blacklist) do
         ip_blacklist:set(banned_ip, true)
     end
+    red:close()
 
     ngx.log(ngx.DEBUG, "End of update blacklist")
     return
