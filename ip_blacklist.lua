@@ -6,9 +6,9 @@
 -- configurable period of time.
 --
 -- block an ip:
---   redis-cli SADD ip_blacklist 10.1.1.1
+--   redis-cli SET blacklist_127.0.0.1_0 1
 -- remove an ip:
---   redis-cli SREM ip_blacklist 10.1.1.1
+--   redis-cli DEL blacklist_127.0.0.1_0 1
 --
 -- also requires lua-resty-redis from:
 --   https://github.com/agentzh/lua-resty-redis
