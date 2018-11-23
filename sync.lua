@@ -1,4 +1,4 @@
-require "ip_blacklist/config"
+require "ip_blacklist.config"
 
 local function load_blacklist_file(path)
     ngx.log(ngx.DEBUG, "Load blacklist by file: " .. path)
@@ -44,7 +44,6 @@ local function sync()
         new_ip_blacklist, err = red:keys(redis_key_prefix .. "*")
         if err then
             ngx.log(ngx.ERR, "Redis read error while retrieving ip_blacklist: " .. err)
-            red:close()
             new_ip_blacklist = load_blacklist_file(cache_file)
         end
     end
@@ -71,7 +70,16 @@ local function sync()
     -- 缓存到本地文件
     dump_blacklist_file(cache_file, new_ip_blacklist)
 
-    red:close()
+    -- keppalive
+    local ok, err = red:set_keepalive(sync_interval * 2 * 1000, 100)
+    if not ok then
+        ngx.log(ngx.ERR, "Redis failed to set keepalive: ", err)
+        local ok, err = red:close()
+        if not ok then
+            ngx.log(ngx.ERR, "Redis failed to close: ", err)
+        end
+    end
+
     ngx.log(ngx.DEBUG, "End of update blacklist")
     return
 end
