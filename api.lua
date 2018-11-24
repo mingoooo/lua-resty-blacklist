@@ -2,6 +2,7 @@ require "ip_blacklist/config"
 local cjson = require "cjson"
 local redis = require "resty.redis"
 
+-- 遇到错误返回的json response
 local function say_err(status, reason, log_level)
     if not log_level then
         log_level = ngx.ERR
@@ -12,6 +13,7 @@ local function say_err(status, reason, log_level)
     ngx.say(cjson.encode({data = {}, reason = reason}))
 end
 
+-- 创建redis连接
 local red = redis:new()
 red:set_timeout(redis_connect_timeout)
 local ok, err = red:connect(redis_host, redis_port)
@@ -21,6 +23,7 @@ if not ok then
     ngx.exit(ngx.HTTP_OK)
 end
 
+-- 保持redis连接
 local function keepalive()
     local ok, err = red:set_keepalive(60000, 50)
     if not ok then
@@ -32,6 +35,8 @@ local function keepalive()
     end
 end
 
+-- 替换ip key
+-- 删除此IP的所有黑名单key，并添加新key
 local function replace_ipkey(ip, key, expire)
     -- 获取keys
     local pattern = redis_key_prefix .. ip .. "*"
