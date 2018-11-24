@@ -32,39 +32,67 @@ local function keepalive()
     end
 end
 
-local function del_pattern(pattern)
+local function replace_ipkey(ip, key, expire)
+    -- 获取keys
+    local pattern = redis_key_prefix .. ip .. "*"
     local old_keys, err = red:keys(pattern)
     if err then
         local reason = "Redis read error: " .. err
         say_err(ngx.HTTP_INTERNAL_SERVER_ERROR, reason)
         return false
     end
+
+    -- 开启事务
     local ok, err = red:multi()
     if not ok then
         ngx.say("Failed to run multi: ", err)
         say_err(ngx.HTTP_INTERNAL_SERVER_ERROR, reason)
         return false
     end
+
+    -- 删除keys
     for _, key in ipairs(old_keys) do
         local res, err = red:del(key)
         if err then
             ngx.say("Failed to run del: ", err)
             say_err(ngx.HTTP_INTERNAL_SERVER_ERROR, reason)
+            local ok, err = red:discard()
+            if err then
+                ngx.log(ngx.ERR, "Discard err: " .. err)
+            end
             return false
         end
     end
+
+    -- set new key
+    if expire then
+        local res, err = red:set(key, 1, "EX", expire)
+    else
+        local res, err = red:set(key, 1)
+    end
+    if err then
+        ngx.log(ngx.ERR, "Set redis key err: " .. err)
+        ngx.log(ngx.DEBUG, "Set redis key: " .. key .. ", expire: " .. expire)
+        say_err(ngx.HTTP_INTERNAL_SERVER_ERROR, reason)
+        local ok, err = red:discard()
+        if err then
+            ngx.log(ngx.ERR, "Discard err: " .. err)
+        end
+        return false
+    end
+
+    -- 执行事务
     local ans, err = red:exec()
     if err then
         ngx.say("Failed to run exec: ", err)
         say_err(ngx.HTTP_INTERNAL_SERVER_ERROR, reason)
+        local ok, err = red:discard()
+        if err then
+            ngx.log(ngx.ERR, "Discard err: " .. err)
+        end
         return false
     end
     return true
-end
-
-local function del_prekey(ip)
-    local pattern = redis_key_prefix .. ip .. "*"
-    return del_pattern(pattern)
 end
 
 local function get()
@@ -121,26 +149,17 @@ local function post()
             key = redis_key_prefix .. ip .. "_" .. expireat
             ngx.log(ngx.DEBUG, "Set redis key: " .. key .. ", expire: " .. expire)
             if expireat == 0 then
-                -- 删除旧key
-                local ok = del_prekey(ip)
+                local ok = replace_ipkey(ip, key)
                 if not ok then
                     return
                 end
-                local res, err = red:set(key, 1)
             else
                 if expire > 0 then
-                    local ok = del_prekey(ip)
+                    local ok = replace_ipkey(ip, key, expire)
                     if not ok then
                         return
                     end
-                    local res, err = red:set(key, 1, "EX", expire)
                 end
-            end
-            if err then
-                ngx.log(ngx.ERR, "Set redis key err: " .. err)
-                ngx.log(ngx.DEBUG, "Set redis key: " .. key .. ", expire: " .. expire)
-                say_err(ngx.HTTP_INTERNAL_SERVER_ERROR, reason)
-                return
             end
         end
     end
