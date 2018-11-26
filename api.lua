@@ -120,6 +120,9 @@ local function get()
 end
 
 local function post()
+end
+
+local function put()
     ngx.req.read_body()
     local body = ngx.req.get_body_data()
     ngx.log(ngx.DEBUG, "Request body: " .. body)
@@ -168,9 +171,6 @@ local function post()
             end
         end
     end
-end
-
-local function put()
 end
 
 local function delete()
