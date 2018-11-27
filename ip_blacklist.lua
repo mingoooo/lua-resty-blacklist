@@ -24,8 +24,28 @@
 -- against the blacklist in a http, server, location, if context:
 --
 -- access_by_lua_file /data/svr/openresty/lualib/ip_blacklist/ip_blacklist.lua;
+--
+-- you can use x_forwarded_for IP
+--
+-- proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
 
-local ip = ngx.var.remote_addr
+function get_user_ip()
+  local headers = ngx.req.get_headers()
+  local ip = ngx.var.http_x_forwarded_for
+
+  if not ip then
+    return ngx.var.remote_addr
+  end
+
+  local index = ip:find(",")
+  if not index then
+    return ip
+  end
+
+  return ip:sub(1, index - 1)
+end
+
+local ip = get_user_ip()
 local ip_blacklist = ngx.shared.ip_blacklist
 
 if ip_blacklist:get(ip) then
