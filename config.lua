@@ -15,3 +15,6 @@ sync_interval = 60
 
 -- 黑名单缓存文件路径
 cache_file = "/tmp/ip_blacklist"
+
+-- 黑名单过期时间缓存文件路径
+expireat_cache_file = "/tmp/ip_blacklist_expireat"
