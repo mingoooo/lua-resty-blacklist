@@ -65,7 +65,7 @@ local function gen_key(ip, expireat, expire)
         expireat = 0
     end
 
-    key = redis_key_prefix .. ip
+    key = redis_key_prefix .. "_" .. ip
     ngx.log(ngx.DEBUG, "Generate key: " .. key)
     if expireat == 0 then
         return key, expireat, nil
@@ -77,7 +77,7 @@ local function get()
     local data = {}
     -- 获取黑名单全部key
     local ip_blacklist_expireat
-    local ip_blacklist, err = red:keys(redis_key_prefix .. "*")
+    local ip_blacklist, err = red:keys(redis_key_prefix .. "_" .. "*")
     if err then
         local reason = "Redis read error: " .. err
         say_err(ngx.HTTP_INTERNAL_SERVER_ERROR, reason)
@@ -259,7 +259,7 @@ local function delete()
             end
 
             for ip in v:gmatch("[^,]+") do
-                local key = redis_key_prefix .. ip:gsub("%s+", "")
+                local key = redis_key_prefix .. "_" .. ip:gsub("%s+", "")
 
                 -- Delete key
                 local res, err = red:del(key)

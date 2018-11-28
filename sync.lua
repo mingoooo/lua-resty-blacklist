@@ -43,11 +43,24 @@ local function sync()
         new_ip_blacklist_expireat = load_file(expireat_cache_file)
     else
         -- 获取新黑名单到nginx缓存
-        new_ip_blacklist, err = red:keys(redis_key_prefix .. "*")
-        if err then
-            ngx.log(ngx.ERR, "Redis read error while retrieving ip_blacklist: " .. err)
-            new_ip_blacklist = load_file(cache_file)
-            new_ip_blacklist_expireat = load_file(expireat_cache_file)
+        cursor = 0
+        while true do
+            local res, err = red:scan(cursor, "MATCH", redis_key_prefix .. "_*", "COUNT", 1000)
+            if err then
+                ngx.log(ngx.ERR, "Redis read error while retrieving ip_blacklist: " .. err)
+                new_ip_blacklist = load_file(cache_file)
+                new_ip_blacklist_expireat = load_file(expireat_cache_file)
+                break
+            end
+
+            cursor = res[1]
+            for _, k in ipairs(res[2]) do
+                table.insert(new_ip_blacklist, k)
+            end
+
+            if cursor == "0" then
+                break
+            end
         end
 
         if new_ip_blacklist[1] ~= nil then
