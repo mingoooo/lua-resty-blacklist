@@ -1,6 +1,11 @@
 # lua-resty-blacklist
 
-Openresty + Redis 黑名单，多个 Openresty 读取同一个 Reids，实现共享黑名单。
+Openresty + Redis 黑名单，多个 Openresty 读取同一个 Reids，实现共享黑名单。
+
+- 支持设置有效期
+- 支持服务降级
+- Restful API
+- WEB 界面（待整理）
 
 # 目录
 
